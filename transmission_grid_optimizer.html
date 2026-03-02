@@ -1,0 +1,1888 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transmission Grid & Storage Optimization</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js"></script>
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%);
+            color: #333;
+            padding: 20px;
+            overflow-x: hidden;
+        }
+        
+        .container {
+            max-width: 1900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.2em;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.95;
+        }
+        
+        .main-layout {
+            display: grid;
+            grid-template-columns: 320px 1fr;
+            gap: 0;
+            min-height: calc(100vh - 200px);
+        }
+        
+        .sidebar {
+            background: #f8f9fa;
+            padding: 20px;
+            border-right: 1px solid #e0e0e0;
+            overflow-y: auto;
+            max-height: calc(100vh - 200px);
+        }
+        
+        .control-section {
+            background: white;
+            padding: 18px;
+            margin-bottom: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        
+        .control-section h3 {
+            color: #1e3c72;
+            margin-bottom: 12px;
+            font-size: 1em;
+            border-bottom: 2px solid #1e3c72;
+            padding-bottom: 6px;
+        }
+        
+        .control-group {
+            margin-bottom: 15px;
+        }
+        
+        .control-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #555;
+            font-size: 0.85em;
+        }
+        
+        select, input[type="number"] {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+        
+        .value-display {
+            display: inline-block;
+            background: #1e3c72;
+            color: white;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 0.8em;
+            font-weight: 600;
+            margin-left: 6px;
+        }
+        
+        input[type="range"] {
+            width: 100%;
+            height: 5px;
+            border-radius: 3px;
+            background: #ddd;
+            outline: none;
+            -webkit-appearance: none;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #1e3c72;
+            cursor: pointer;
+        }
+        
+        input[type="range"]::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #1e3c72;
+            cursor: pointer;
+            border: none;
+        }
+        
+        .btn {
+            background: #1e3c72;
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.95em;
+            font-weight: 600;
+            width: 100%;
+            margin-top: 8px;
+            transition: background 0.3s;
+        }
+        
+        .btn:hover {
+            background: #2a5298;
+        }
+        
+        .btn-secondary {
+            background: #6c757d;
+        }
+        
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+        
+        .content-area {
+            padding: 20px;
+            overflow-y: auto;
+            max-height: calc(100vh - 200px);
+        }
+        
+        .tab-container {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+        
+        .tab {
+            padding: 12px 24px;
+            background: #f8f9fa;
+            border: none;
+            border-bottom: 3px solid transparent;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: 600;
+            color: #666;
+            transition: all 0.3s;
+        }
+        
+        .tab.active {
+            color: #1e3c72;
+            border-bottom-color: #1e3c72;
+            background: white;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        #network-container {
+            width: 100%;
+            height: 600px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background: #fafafa;
+        }
+        
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        
+        .metric-card {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            padding: 16px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        
+        .metric-card.warning {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+        
+        .metric-card.success {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+        
+        .metric-card h4 {
+            font-size: 0.8em;
+            opacity: 0.9;
+            margin-bottom: 6px;
+            font-weight: 500;
+        }
+        
+        .metric-card .value {
+            font-size: 1.6em;
+            font-weight: 700;
+        }
+        
+        .metric-card .unit {
+            font-size: 0.85em;
+            opacity: 0.85;
+            margin-left: 3px;
+        }
+        
+        .chart-wrapper {
+            background: white;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        
+        .node-info {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            border-left: 4px solid #1e3c72;
+        }
+        
+        .node-info h4 {
+            color: #1e3c72;
+            margin-bottom: 10px;
+        }
+        
+        .node-info-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            font-size: 0.9em;
+        }
+        
+        .node-info-item {
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        .node-info-item strong {
+            color: #555;
+        }
+        
+        .legend {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            margin: 15px 0;
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 6px;
+            font-size: 0.85em;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9em;
+        }
+        
+        th, td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #1e3c72;
+        }
+        
+        tr:hover {
+            background: #f8f9fa;
+        }
+        
+        .priority-high {
+            color: #dc3545;
+            font-weight: 600;
+        }
+        
+        .priority-medium {
+            color: #ffc107;
+            font-weight: 600;
+        }
+        
+        .priority-low {
+            color: #28a745;
+            font-weight: 600;
+        }
+        
+        .alert {
+            padding: 12px;
+            margin-bottom: 15px;
+            border-radius: 6px;
+            border-left: 4px solid;
+        }
+        
+        .alert-warning {
+            background: #fff3cd;
+            border-left-color: #ffc107;
+            color: #856404;
+        }
+        
+        .alert-danger {
+            background: #f8d7da;
+            border-left-color: #dc3545;
+            color: #721c24;
+        }
+        
+        .alert-info {
+            background: #d1ecf1;
+            border-left-color: #17a2b8;
+            color: #0c5460;
+        }
+
+        .context-menu {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+            min-width: 200px;
+            overflow: hidden;
+        }
+
+        .context-menu-header {
+            padding: 8px 14px;
+            font-size: 0.75em;
+            font-weight: 600;
+            color: #999;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .context-menu-item {
+            padding: 10px 14px;
+            cursor: pointer;
+            font-size: 0.9em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: background 0.15s;
+        }
+
+        .context-menu-item:hover {
+            background: #f0f4ff;
+        }
+
+        .context-menu-item .dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 3px;
+            flex-shrink: 0;
+        }
+
+        .context-menu-divider {
+            height: 1px;
+            background: #e8e8e8;
+            margin: 4px 0;
+        }
+
+        .detail-form .detail-row {
+            margin-bottom: 10px;
+        }
+
+        .detail-form label {
+            display: block;
+            font-weight: 600;
+            color: #555;
+            font-size: 0.8em;
+            margin-bottom: 3px;
+        }
+
+        .detail-form input,
+        .detail-form select {
+            width: 100%;
+            padding: 6px 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 0.85em;
+        }
+
+        .detail-form .btn-row {
+            display: flex;
+            gap: 6px;
+            margin-top: 10px;
+        }
+
+        .detail-form .btn-row .btn {
+            flex: 1;
+            padding: 8px;
+            font-size: 0.8em;
+            margin-top: 0;
+        }
+
+        .detail-form .flow-info {
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px solid #e0e0e0;
+            font-size: 0.8em;
+            color: #666;
+        }
+
+        .detail-form .flow-info div {
+            display: flex;
+            justify-content: space-between;
+            margin: 3px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>⚡ Transmission Grid & Storage Optimization Simulator</h1>
+            <p>Network Flow Analysis & Strategic Storage Placement</p>
+        </div>
+        
+        <div class="main-layout">
+            <div class="sidebar">
+                <div class="control-section">
+                    <h3>🗺️ Grid Topology</h3>
+                    <div class="control-group">
+                        <label>Network Type</label>
+                        <select id="topology">
+                            <option value="regional">Regional Grid (8 nodes)</option>
+                            <option value="metro">Metro Area (12 nodes)</option>
+                            <option value="radial">Radial Distribution</option>
+                            <option value="mesh">Mesh Network</option>
+                            <option value="custom">Custom (Build Your Own)</option>
+                        </select>
+                    </div>
+                    <button class="btn" onclick="generateGrid()">Generate Grid</button>
+                </div>
+                
+                <div class="control-section" id="edit-controls" style="display: none;">
+                    <h3>✏️ Edit Mode</h3>
+                    <div class="control-group">
+                        <label>Action</label>
+                        <select id="edit-mode">
+                            <option value="add-node">Add Node</option>
+                            <option value="add-edge">Add Connection</option>
+                            <option value="edit-node">Edit Node</option>
+                            <option value="delete">Delete</option>
+                        </select>
+                    </div>
+                    <div class="control-group">
+                        <label>Node Type</label>
+                        <select id="node-type">
+                            <option value="generation">Generation</option>
+                            <option value="load">Load/Data Center</option>
+                            <option value="substation">Substation</option>
+                        </select>
+                    </div>
+                    <div class="control-group">
+                        <label>Capacity (MW) <span class="value-display" id="node-capacity-val">100</span></label>
+                        <input type="range" id="node-capacity" min="0" max="500" value="100" step="10">
+                    </div>
+                    <div class="control-group">
+                        <label>Line Capacity (MW) <span class="value-display" id="line-capacity-val">200</span></label>
+                        <input type="range" id="line-capacity" min="50" max="500" value="200" step="25">
+                    </div>
+                    <button class="btn btn-secondary" onclick="clearGrid()">Clear All</button>
+                    <button class="btn" onclick="saveCustomGrid()">Save Custom Grid</button>
+                    <button class="btn btn-secondary" onclick="document.getElementById('load-grid-input').click()">Load Grid</button>
+                    <input type="file" id="load-grid-input" accept=".json" style="display:none" onchange="loadCustomGrid(event)">
+                </div>
+                
+                <div class="control-section">
+                    <h3>📊 Scenario Settings</h3>
+                    <div class="control-group">
+                        <label>Time Period</label>
+                        <select id="time-period">
+                            <option value="peak">Peak Demand</option>
+                            <option value="offpeak">Off-Peak</option>
+                            <option value="solar">High Solar</option>
+                            <option value="wind">High Wind</option>
+                            <option value="extreme">Extreme Event</option>
+                        </select>
+                    </div>
+                    <div class="control-group">
+                        <label>Data Center Load (MW) <span class="value-display" id="dc-load-val">200</span></label>
+                        <input type="range" id="dc-load" min="0" max="500" value="200" step="25">
+                    </div>
+                    <div class="control-group">
+                        <label>Renewable Variability <span class="value-display" id="variability-val">30</span></label>
+                        <input type="range" id="variability" min="0" max="100" value="30" step="10">
+                    </div>
+                </div>
+                
+                <div class="control-section">
+                    <h3>🔋 Storage Strategy</h3>
+                    <div class="control-group">
+                        <label>Total Storage Budget (kWh) <span class="value-display" id="storage-budget-val">200,000</span></label>
+                        <input type="range" id="storage-budget" min="0" max="500000" value="200000" step="10000">
+                    </div>
+                    <div class="control-group">
+                        <label>Optimization Goal</label>
+                        <select id="optimization-goal">
+                            <option value="utilization">Maximize Utilization</option>
+                            <option value="reliability">Maximize Reliability</option>
+                            <option value="cost">Minimize Congestion Cost</option>
+                            <option value="balanced">Balanced Approach</option>
+                        </select>
+                    </div>
+                    <button class="btn" onclick="optimizeStorage()">Optimize Storage</button>
+                    <button class="btn btn-secondary" onclick="runScenario()">Run Scenario</button>
+                </div>
+                
+                <div class="control-section">
+                    <h3>ℹ️ Selected Node</h3>
+                    <div id="selected-node-info" style="font-size: 0.85em; color: #666;">
+                        Click a node to view details
+                    </div>
+                </div>
+            </div>
+            
+            <div class="content-area">
+                <div class="tab-container">
+                    <button class="tab active" onclick="switchTab('network', this)">Network View</button>
+                    <button class="tab" onclick="switchTab('analysis', this)">Flow Analysis</button>
+                    <button class="tab" onclick="switchTab('recommendations', this)">Storage Recommendations</button>
+                </div>
+                
+                <div id="network-tab" class="tab-content active">
+                    <div id="edit-instructions" class="alert alert-info" style="display: none;">
+                        <h4>📝 Edit Mode Instructions</h4>
+                        <div id="instruction-text"></div>
+                    </div>
+                    
+                    <div class="metrics-grid">
+                        <div class="metric-card" id="card-utilization">
+                            <h4>Avg Utilization</h4>
+                            <div class="value" id="metric-utilization">0<span class="unit">%</span></div>
+                        </div>
+                        <div class="metric-card" id="card-congestion">
+                            <h4>Congested Lines</h4>
+                            <div class="value" id="metric-congestion">0<span class="unit"></span></div>
+                        </div>
+                        <div class="metric-card" id="card-storage">
+                            <h4>Storage Deployed</h4>
+                            <div class="value" id="metric-storage">0<span class="unit">kWh</span></div>
+                        </div>
+                        <div class="metric-card" id="card-efficiency">
+                            <h4>Grid Efficiency</h4>
+                            <div class="value" id="metric-efficiency">0<span class="unit">%</span></div>
+                        </div>
+                    </div>
+                    
+                    <div class="legend">
+                        <div class="legend-item">
+                            <div class="legend-color" style="background: #4CAF50;"></div>
+                            <span>Generation Node</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-color" style="background: #FF5722;"></div>
+                            <span>Load/Data Center</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-color" style="background: #FFC107;"></div>
+                            <span>Substation w/ Storage</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-color" style="background: #9E9E9E;"></div>
+                            <span>Substation</span>
+                        </div>
+                    </div>
+                    
+                    <div id="network-container"></div>
+                    
+                    <div class="legend" style="margin-top: 15px;">
+                        <div class="legend-item">
+                            <div class="legend-color" style="background: #4CAF50;"></div>
+                            <span>&lt;50% utilized</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-color" style="background: #FFC107;"></div>
+                            <span>50-80% utilized</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-color" style="background: #FF9800;"></div>
+                            <span>80-95% utilized</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-color" style="background: #F44336;"></div>
+                            <span>&gt;95% congested</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="analysis-tab" class="tab-content">
+                    <div class="chart-wrapper">
+                        <div id="utilization-chart" style="height: 400px;"></div>
+                    </div>
+                    <div class="chart-wrapper">
+                        <div id="flow-chart" style="height: 400px;"></div>
+                    </div>
+                </div>
+                
+                <div id="recommendations-tab" class="tab-content">
+                    <div id="recommendations-content"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="context-menu" id="context-menu">
+        <div class="context-menu-header">Add Node</div>
+        <div class="context-menu-item" data-action="add-generation">
+            <div class="dot" style="background: #4CAF50;"></div>
+            Generation
+        </div>
+        <div class="context-menu-item" data-action="add-load">
+            <div class="dot" style="background: #FF5722;"></div>
+            Load / Data Center
+        </div>
+        <div class="context-menu-item" data-action="add-substation">
+            <div class="dot" style="background: #9E9E9E;"></div>
+            Substation
+        </div>
+        <div class="context-menu-divider" id="ctx-node-divider" style="display:none;"></div>
+        <div class="context-menu-item" id="ctx-delete-node" data-action="delete-node" style="display:none; color: #dc3545;">
+            Delete Node
+        </div>
+    </div>
+
+    <script>
+        let network;
+        let nodes, edges;
+        let gridData = {};
+        let optimizationResults = {};
+        let editMode = {
+            active: false,
+            mode: 'add-node',
+            selectedNode: null,
+            firstNode: null,
+            nextNodeId: 1,
+            nextEdgeId: 0
+        };
+        
+        // Initialize controls
+        const controls = {
+            topology: document.getElementById('topology'),
+            timePeriod: document.getElementById('time-period'),
+            dcLoad: document.getElementById('dc-load'),
+            variability: document.getElementById('variability'),
+            storageBudget: document.getElementById('storage-budget'),
+            optimizationGoal: document.getElementById('optimization-goal'),
+            editMode: document.getElementById('edit-mode'),
+            nodeType: document.getElementById('node-type'),
+            nodeCapacity: document.getElementById('node-capacity'),
+            lineCapacity: document.getElementById('line-capacity')
+        };
+        
+        // Update value displays
+        ['dcLoad', 'variability', 'storageBudget', 'nodeCapacity', 'lineCapacity'].forEach(key => {
+            controls[key].addEventListener('input', () => {
+                const val = controls[key].value;
+                const display = key === 'storageBudget' ? Number(val).toLocaleString() : val;
+                document.getElementById(key.replace(/([A-Z])/g, '-$1').toLowerCase() + '-val').textContent = display;
+            });
+        });
+        
+        // Listen for topology changes
+        controls.topology.addEventListener('change', () => {
+            const isCustom = controls.topology.value === 'custom';
+            document.getElementById('edit-controls').style.display = isCustom ? 'block' : 'none';
+            if (isCustom) {
+                enableEditMode();
+            } else {
+                disableEditMode();
+            }
+        });
+        
+        // Listen for edit mode changes
+        controls.editMode.addEventListener('change', () => {
+            updateEditInstructions();
+        });
+        
+        function enableEditMode() {
+            editMode.active = true;
+            document.getElementById('edit-instructions').style.display = 'block';
+            
+            if (!gridData.nodes || gridData.nodes.length === 0) {
+                gridData = {nodes: [], edges: []};
+                visualizeNetwork(gridData);
+            }
+            
+            updateEditInstructions();
+        }
+        
+        function disableEditMode() {
+            editMode.active = false;
+            editMode.selectedNode = null;
+            editMode.firstNode = null;
+            document.getElementById('edit-instructions').style.display = 'none';
+        }
+        
+        function updateEditInstructions() {
+            const mode = controls.editMode.value;
+            const instructions = {
+                'add-node': '🖱️ Click anywhere on the canvas to add a new node. Set the node type and capacity in the sidebar first.',
+                'add-edge': '🔗 Click on two nodes to connect them with a transmission line. The line capacity is set in the sidebar.',
+                'edit-node': '✏️ Click on a node to edit its properties. Modify the settings in the sidebar and click the node again to apply.',
+                'delete': '🗑️ Click on a node or line to delete it.'
+            };
+            
+            document.getElementById('instruction-text').innerHTML = instructions[mode];
+        }
+        
+        function clearGrid() {
+            if (confirm('Clear all nodes and connections?')) {
+                gridData = {nodes: [], edges: []};
+                editMode.nextNodeId = 1;
+                editMode.nextEdgeId = 0;
+                editMode.selectedNode = null;
+                editMode.firstNode = null;
+                visualizeNetwork(gridData);
+            }
+        }
+        
+        function saveCustomGrid() {
+            const gridJson = JSON.stringify(gridData, null, 2);
+            const blob = new Blob([gridJson], {type: 'application/json'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'custom_grid.json';
+            a.click();
+            URL.revokeObjectURL(url);
+            
+            alert('Grid saved! You can reload it later or share it.');
+        }
+
+        function loadCustomGrid(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const loaded = JSON.parse(e.target.result);
+                    if (!loaded.nodes || !loaded.edges) {
+                        alert('Invalid grid file: missing nodes or edges.');
+                        return;
+                    }
+
+                    gridData = loaded;
+
+                    // Ensure all nodes have storage properties
+                    gridData.nodes.forEach(node => {
+                        if (node.storage === undefined) node.storage = 0;
+                        if (node.storagePower === undefined) node.storagePower = 0;
+                    });
+
+                    // Update ID counters
+                    editMode.nextNodeId = gridData.nodes.length > 0
+                        ? Math.max(...gridData.nodes.map(n => n.id)) + 1 : 1;
+                    editMode.nextEdgeId = gridData.edges.length > 0
+                        ? Math.max(...gridData.edges.map(e => e.id)) + 1 : 0;
+
+                    // Switch to custom mode and enable editing
+                    controls.topology.value = 'custom';
+                    document.getElementById('edit-controls').style.display = 'block';
+                    enableEditMode();
+
+                    visualizeNetwork(gridData);
+                } catch (err) {
+                    alert('Failed to parse grid file: ' + err.message);
+                }
+            };
+            reader.readAsText(file);
+            // Reset input so the same file can be loaded again
+            event.target.value = '';
+        }
+
+        function switchTab(tabName, btn) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+
+            btn.classList.add('active');
+            document.getElementById(tabName + '-tab').classList.add('active');
+
+            // Resize Plotly charts when their tab becomes visible
+            if (tabName === 'analysis') {
+                setTimeout(() => {
+                    const utilizationChart = document.getElementById('utilization-chart');
+                    const flowChart = document.getElementById('flow-chart');
+                    if (utilizationChart && utilizationChart.data) Plotly.Plots.resize(utilizationChart);
+                    if (flowChart && flowChart.data) Plotly.Plots.resize(flowChart);
+                }, 50);
+            }
+        }
+        
+        function generateGrid() {
+            const topology = controls.topology.value;
+            
+            if (topology === 'custom') {
+                // Initialize empty custom grid
+                gridData = {nodes: [], edges: []};
+                editMode.nextNodeId = 1;
+                editMode.nextEdgeId = 0;
+                enableEditMode();
+            } else {
+                disableEditMode();
+                gridData = createGridTopology(topology);
+                
+                // Set next IDs for potential custom editing
+                editMode.nextNodeId = Math.max(...gridData.nodes.map(n => n.id)) + 1;
+                editMode.nextEdgeId = gridData.edges.length;
+            }
+            
+            visualizeNetwork(gridData);
+            
+            if (topology !== 'custom') {
+                runScenario();
+            }
+        }
+        
+        function createGridTopology(type) {
+            let nodesList = [];
+            let edgesList = [];
+            
+            if (type === 'regional') {
+                // 8-node regional grid
+                nodesList = [
+                    {id: 1, label: 'Plant A\n500MW', type: 'generation', capacity: 500, x: -300, y: -200},
+                    {id: 2, label: 'Plant B\n400MW', type: 'generation', capacity: 400, x: 300, y: -200},
+                    {id: 3, label: 'Sub-1', type: 'substation', capacity: 0, x: -200, y: 0},
+                    {id: 4, label: 'Sub-2', type: 'substation', capacity: 0, x: 200, y: 0},
+                    {id: 5, label: 'DC-1\n150MW', type: 'load', capacity: -150, x: -300, y: 200},
+                    {id: 6, label: 'DC-2\n200MW', type: 'load', capacity: -200, x: 0, y: 200},
+                    {id: 7, label: 'Load-1\n100MW', type: 'load', capacity: -100, x: 300, y: 200},
+                    {id: 8, label: 'Solar\n250MW', type: 'generation', capacity: 250, x: 0, y: -200}
+                ];
+                
+                edgesList = [
+                    {id: 0, from: 1, to: 3, capacity: 400, label: '400MW'},
+                    {id: 1, from: 2, to: 4, capacity: 350, label: '350MW'},
+                    {id: 2, from: 8, to: 3, capacity: 200, label: '200MW'},
+                    {id: 3, from: 8, to: 4, capacity: 200, label: '200MW'},
+                    {id: 4, from: 3, to: 4, capacity: 300, label: '300MW'},
+                    {id: 5, from: 3, to: 5, capacity: 200, label: '200MW'},
+                    {id: 6, from: 3, to: 6, capacity: 250, label: '250MW'},
+                    {id: 7, from: 4, to: 6, capacity: 250, label: '250MW'},
+                    {id: 8, from: 4, to: 7, capacity: 200, label: '200MW'}
+                ];
+            } else if (type === 'metro') {
+                // 12-node metro grid
+                nodesList = [
+                    {id: 1, label: 'Gen-1\n400MW', type: 'generation', capacity: 400, x: -400, y: -300},
+                    {id: 2, label: 'Gen-2\n350MW', type: 'generation', capacity: 350, x: 400, y: -300},
+                    {id: 3, label: 'Solar\n200MW', type: 'generation', capacity: 200, x: 0, y: -300},
+                    {id: 4, label: 'Sub-A', type: 'substation', capacity: 0, x: -300, y: -100},
+                    {id: 5, label: 'Sub-B', type: 'substation', capacity: 0, x: 0, y: -100},
+                    {id: 6, label: 'Sub-C', type: 'substation', capacity: 0, x: 300, y: -100},
+                    {id: 7, label: 'Sub-D', type: 'substation', capacity: 0, x: -200, y: 100},
+                    {id: 8, label: 'Sub-E', type: 'substation', capacity: 0, x: 200, y: 100},
+                    {id: 9, label: 'DC-1\n180MW', type: 'load', capacity: -180, x: -300, y: 300},
+                    {id: 10, label: 'DC-2\n220MW', type: 'load', capacity: -220, x: 0, y: 300},
+                    {id: 11, label: 'Load\n120MW', type: 'load', capacity: -120, x: 300, y: 300},
+                    {id: 12, label: 'Wind\n150MW', type: 'generation', capacity: 150, x: 0, y: 300}
+                ];
+                
+                edgesList = [
+                    {id: 0, from: 1, to: 4, capacity: 350, label: '350MW'},
+                    {id: 1, from: 2, to: 6, capacity: 300, label: '300MW'},
+                    {id: 2, from: 3, to: 5, capacity: 180, label: '180MW'},
+                    {id: 3, from: 4, to: 5, capacity: 250, label: '250MW'},
+                    {id: 4, from: 5, to: 6, capacity: 250, label: '250MW'},
+                    {id: 5, from: 4, to: 7, capacity: 200, label: '200MW'},
+                    {id: 6, from: 5, to: 7, capacity: 180, label: '180MW'},
+                    {id: 7, from: 5, to: 8, capacity: 180, label: '180MW'},
+                    {id: 8, from: 6, to: 8, capacity: 200, label: '200MW'},
+                    {id: 9, from: 7, to: 9, capacity: 200, label: '200MW'},
+                    {id: 10, from: 7, to: 10, capacity: 150, label: '150MW'},
+                    {id: 11, from: 8, to: 10, capacity: 150, label: '150MW'},
+                    {id: 12, from: 8, to: 11, capacity: 150, label: '150MW'},
+                    {id: 13, from: 12, to: 10, capacity: 150, label: '150MW'}
+                ];
+            } else if (type === 'radial') {
+                // Radial distribution
+                nodesList = [
+                    {id: 1, label: 'Plant\n600MW', type: 'generation', capacity: 600, x: 0, y: -300},
+                    {id: 2, label: 'Sub-Main', type: 'substation', capacity: 0, x: 0, y: -100},
+                    {id: 3, label: 'Sub-A', type: 'substation', capacity: 0, x: -250, y: 100},
+                    {id: 4, label: 'Sub-B', type: 'substation', capacity: 0, x: 0, y: 100},
+                    {id: 5, label: 'Sub-C', type: 'substation', capacity: 0, x: 250, y: 100},
+                    {id: 6, label: 'DC-1\n150MW', type: 'load', capacity: -150, x: -250, y: 300},
+                    {id: 7, label: 'Load\n100MW', type: 'load', capacity: -100, x: 0, y: 300},
+                    {id: 8, label: 'DC-2\n180MW', type: 'load', capacity: -180, x: 250, y: 300}
+                ];
+                
+                edgesList = [
+                    {id: 0, from: 1, to: 2, capacity: 500, label: '500MW'},
+                    {id: 1, from: 2, to: 3, capacity: 200, label: '200MW'},
+                    {id: 2, from: 2, to: 4, capacity: 200, label: '200MW'},
+                    {id: 3, from: 2, to: 5, capacity: 250, label: '250MW'},
+                    {id: 4, from: 3, to: 6, capacity: 180, label: '180MW'},
+                    {id: 5, from: 4, to: 7, capacity: 150, label: '150MW'},
+                    {id: 6, from: 5, to: 8, capacity: 200, label: '200MW'}
+                ];
+            } else { // mesh
+                // Mesh network
+                nodesList = [
+                    {id: 1, label: 'Gen-1\n300MW', type: 'generation', capacity: 300, x: -300, y: -200},
+                    {id: 2, label: 'Gen-2\n300MW', type: 'generation', capacity: 300, x: 300, y: -200},
+                    {id: 3, label: 'Sub-A', type: 'substation', capacity: 0, x: -200, y: 0},
+                    {id: 4, label: 'Sub-B', type: 'substation', capacity: 0, x: 0, y: 0},
+                    {id: 5, label: 'Sub-C', type: 'substation', capacity: 0, x: 200, y: 0},
+                    {id: 6, label: 'DC-1\n150MW', type: 'load', capacity: -150, x: -200, y: 200},
+                    {id: 7, label: 'DC-2\n200MW', type: 'load', capacity: -200, x: 200, y: 200}
+                ];
+                
+                edgesList = [
+                    {id: 0, from: 1, to: 3, capacity: 250, label: '250MW'},
+                    {id: 1, from: 1, to: 4, capacity: 200, label: '200MW'},
+                    {id: 2, from: 2, to: 4, capacity: 200, label: '200MW'},
+                    {id: 3, from: 2, to: 5, capacity: 250, label: '250MW'},
+                    {id: 4, from: 3, to: 4, capacity: 200, label: '200MW'},
+                    {id: 5, from: 3, to: 5, capacity: 180, label: '180MW'},
+                    {id: 6, from: 4, to: 5, capacity: 200, label: '200MW'},
+                    {id: 7, from: 3, to: 6, capacity: 180, label: '180MW'},
+                    {id: 8, from: 4, to: 6, capacity: 150, label: '150MW'},
+                    {id: 9, from: 4, to: 7, capacity: 150, label: '150MW'},
+                    {id: 10, from: 5, to: 7, capacity: 220, label: '220MW'}
+                ];
+            }
+            
+            // Add storage capacity (kWh) to substations
+            nodesList.forEach(node => {
+                node.storage = 0;
+                node.storagePower = 0;
+            });
+            
+            return {nodes: nodesList, edges: edgesList};
+        }
+        
+        function visualizeNetwork(gridData) {
+            const container = document.getElementById('network-container');
+            
+            const nodeColors = {
+                'generation': '#4CAF50',
+                'load': '#FF5722',
+                'substation': '#9E9E9E'
+            };
+
+            nodes = new vis.DataSet(gridData.nodes.map(node => {
+                const hasStorage = node.type === 'substation' && node.storage > 0;
+                return {
+                id: node.id,
+                label: node.label + (hasStorage ? `\n🔋${Number(node.storage).toLocaleString()}kWh` : ''),
+                color: {
+                    background: hasStorage ? '#FFC107' : nodeColors[node.type],
+                    border: '#333',
+                    highlight: {
+                        background: '#FFD700',
+                        border: '#FF6B6B'
+                    }
+                },
+                font: {size: 12, color: '#fff', face: 'monospace', bold: true},
+                shape: 'box',
+                size: 25,
+                x: node.x,
+                y: node.y,
+                physics: false
+            };
+            }));
+
+            edges = new vis.DataSet(gridData.edges.map((edge, i) => ({
+                id: edge.id !== undefined ? edge.id : i,
+                from: edge.from,
+                to: edge.to,
+                label: edge.label,
+                color: {color: '#999'},
+                width: 2,
+                font: {size: 10, color: '#666', strokeWidth: 0},
+                smooth: false
+            })));
+            
+            const data = {nodes, edges};
+            const options = {
+                physics: {enabled: false},
+                interaction: {
+                    hover: true,
+                    navigationButtons: true
+                },
+                manipulation: {enabled: false}
+            };
+            
+            network = new vis.Network(container, data, options);
+            
+            // Click handler for regular mode
+            network.on('click', function(params) {
+                hideContextMenu();
+                if (editMode.active) {
+                    handleEditClick(params);
+                }
+                if (params.nodes.length > 0) {
+                    const nodeId = params.nodes[0];
+                    const node = gridData.nodes.find(n => n.id === nodeId);
+                    displayNodeInfo(node);
+                }
+            });
+
+            // Right-click handler for context menu
+            network.on('oncontext', function(params) {
+                params.event.preventDefault();
+                if (params.event.srcEvent) params.event.srcEvent.preventDefault();
+                const canvasPos = params.pointer.canvas;
+                const domPos = params.pointer.DOM;
+
+                // Store canvas position for node placement
+                editMode.contextCanvasX = canvasPos.x;
+                editMode.contextCanvasY = canvasPos.y;
+
+                // Check if right-clicked on a node
+                const nodeId = network.getNodeAt(domPos);
+                const ctxDeleteNode = document.getElementById('ctx-delete-node');
+                const ctxDivider = document.getElementById('ctx-node-divider');
+                if (nodeId !== undefined) {
+                    editMode.contextNodeId = nodeId;
+                    ctxDeleteNode.style.display = '';
+                    ctxDivider.style.display = '';
+                } else {
+                    editMode.contextNodeId = null;
+                    ctxDeleteNode.style.display = 'none';
+                    ctxDivider.style.display = 'none';
+                }
+
+                showContextMenu(params.event.srcEvent || params.event);
+            });
+        }
+
+        function showContextMenu(event) {
+            const menu = document.getElementById('context-menu');
+            const x = event.clientX || event.x;
+            const y = event.clientY || event.y;
+            menu.style.left = x + 'px';
+            menu.style.top = y + 'px';
+            menu.style.display = 'block';
+
+            // Reposition if overflowing viewport
+            const rect = menu.getBoundingClientRect();
+            if (rect.right > window.innerWidth) menu.style.left = (x - rect.width) + 'px';
+            if (rect.bottom > window.innerHeight) menu.style.top = (y - rect.height) + 'px';
+        }
+
+        function hideContextMenu() {
+            document.getElementById('context-menu').style.display = 'none';
+        }
+
+        // Dismiss context menu on click anywhere
+        document.addEventListener('click', hideContextMenu);
+
+        // Handle context menu item clicks
+        document.getElementById('context-menu').addEventListener('click', function(e) {
+            const item = e.target.closest('.context-menu-item');
+            if (!item) return;
+
+            const action = item.dataset.action;
+            const cx = editMode.contextCanvasX;
+            const cy = editMode.contextCanvasY;
+
+            // Ensure gridData is initialized
+            if (!gridData.nodes) {
+                gridData = {nodes: [], edges: []};
+            }
+
+            // Auto-enable edit mode if not already
+            if (!editMode.active) {
+                controls.topology.value = 'custom';
+                document.getElementById('edit-controls').style.display = 'block';
+                enableEditMode();
+            }
+
+            if (action === 'add-generation') {
+                addNodeOfType('generation', cx, cy);
+            } else if (action === 'add-load') {
+                addNodeOfType('load', cx, cy);
+            } else if (action === 'add-substation') {
+                addNodeOfType('substation', cx, cy);
+            } else if (action === 'delete-node' && editMode.contextNodeId !== null) {
+                deleteNode(editMode.contextNodeId);
+            }
+
+            hideContextMenu();
+        });
+
+        function addNodeOfType(type, x, y) {
+            const nodeId = editMode.nextNodeId++;
+            const capacity = parseFloat(controls.nodeCapacity.value);
+            const capacityValue = type === 'load' ? -capacity : capacity;
+            const prefix = type === 'generation' ? 'Gen' : type === 'load' ? 'DC' : 'Sub';
+            const label = `${prefix}-${nodeId}${type !== 'substation' ? '\n' + capacity + 'MW' : ''}`;
+
+            const nodeColors = {
+                'generation': '#4CAF50',
+                'load': '#FF5722',
+                'substation': '#9E9E9E'
+            };
+
+            const newNode = {
+                id: nodeId,
+                label: label,
+                type: type,
+                capacity: capacityValue,
+                actualCapacity: capacityValue,
+                storage: 0,
+                storagePower: 0,
+                x: x,
+                y: y
+            };
+
+            gridData.nodes.push(newNode);
+
+            nodes.add({
+                id: nodeId,
+                label: label,
+                color: { background: nodeColors[type], border: '#333',
+                    highlight: { background: '#FFD700', border: '#FF6B6B' }
+                },
+                font: {size: 12, color: '#fff', face: 'monospace', bold: true},
+                shape: 'box',
+                size: 25,
+                x: x,
+                y: y,
+                physics: false
+            });
+
+            displayNodeInfo(newNode);
+        }
+
+        function handleEditClick(params) {
+            const mode = controls.editMode.value;
+            
+            if (mode === 'add-node') {
+                // Add node where clicked (only if not clicking on existing node)
+                if (params.nodes.length === 0) {
+                    addNodeAtPosition(params.pointer.canvas.x, params.pointer.canvas.y);
+                }
+            } else if (mode === 'add-edge') {
+                // Connect two nodes
+                if (params.nodes.length > 0) {
+                    const nodeId = params.nodes[0];
+                    
+                    if (editMode.firstNode === null) {
+                        editMode.firstNode = nodeId;
+                        // Highlight selected node
+                        nodes.update({id: nodeId, borderWidth: 4, color: {border: '#FFD700'}});
+                    } else if (editMode.firstNode !== nodeId) {
+                        addEdgeBetweenNodes(editMode.firstNode, nodeId);
+                        // Reset selection
+                        nodes.update({id: editMode.firstNode, borderWidth: 1, color: {border: '#333'}});
+                        editMode.firstNode = null;
+                    }
+                }
+            } else if (mode === 'edit-node') {
+                if (params.nodes.length > 0) {
+                    editNode(params.nodes[0]);
+                }
+            } else if (mode === 'delete') {
+                if (params.nodes.length > 0) {
+                    deleteNode(params.nodes[0]);
+                } else if (params.edges.length > 0) {
+                    deleteEdge(params.edges[0]);
+                }
+            }
+        }
+        
+        function addNodeAtPosition(x, y) {
+            const nodeType = controls.nodeType.value;
+            const capacity = parseFloat(controls.nodeCapacity.value);
+            const nodeId = editMode.nextNodeId++;
+            
+            const capacityValue = nodeType === 'load' ? -capacity : capacity;
+            const label = `${nodeType === 'generation' ? 'Gen' : nodeType === 'load' ? 'DC' : 'Sub'}-${nodeId}\n${nodeType !== 'substation' ? capacity + 'MW' : ''}`;
+            
+            const newNode = {
+                id: nodeId,
+                label: label,
+                type: nodeType,
+                capacity: capacityValue,
+                actualCapacity: capacityValue,
+                storage: 0,
+                storagePower: 0,
+                x: x,
+                y: y
+            };
+            
+            gridData.nodes.push(newNode);
+            
+            const nodeColors = {
+                'generation': '#4CAF50',
+                'load': '#FF5722',
+                'substation': '#9E9E9E'
+            };
+            
+            nodes.add({
+                id: nodeId,
+                label: label,
+                color: {
+                    background: nodeColors[nodeType],
+                    border: '#333'
+                },
+                font: {size: 12, color: '#fff', face: 'monospace', bold: true},
+                shape: 'box',
+                size: 25,
+                x: x,
+                y: y,
+                physics: false
+            });
+        }
+        
+        function addEdgeBetweenNodes(fromId, toId) {
+            const lineCapacity = parseFloat(controls.lineCapacity.value);
+            const edgeId = editMode.nextEdgeId++;
+            
+            const newEdge = {
+                id: edgeId,
+                from: fromId,
+                to: toId,
+                capacity: lineCapacity,
+                label: lineCapacity + 'MW'
+            };
+            
+            gridData.edges.push(newEdge);
+            
+            edges.add({
+                id: edgeId,
+                from: fromId,
+                to: toId,
+                label: lineCapacity + 'MW',
+                color: {color: '#999'},
+                width: 2,
+                font: {size: 10, color: '#666', strokeWidth: 0},
+                smooth: false
+            });
+        }
+        
+        function editNode(nodeId) {
+            const node = gridData.nodes.find(n => n.id === nodeId);
+            if (!node) return;
+            
+            const nodeType = controls.nodeType.value;
+            const capacity = parseFloat(controls.nodeCapacity.value);
+            const capacityValue = nodeType === 'load' ? -capacity : capacity;
+            
+            node.type = nodeType;
+            node.capacity = capacityValue;
+            node.actualCapacity = capacityValue;
+            node.label = `${nodeType === 'generation' ? 'Gen' : nodeType === 'load' ? 'DC' : 'Sub'}-${nodeId}\n${nodeType !== 'substation' ? capacity + 'MW' : ''}`;
+            
+            const nodeColors = {
+                'generation': '#4CAF50',
+                'load': '#FF5722',
+                'substation': '#9E9E9E'
+            };
+            
+            nodes.update({
+                id: nodeId,
+                label: node.label,
+                color: {
+                    background: nodeColors[nodeType],
+                    border: '#333'
+                }
+            });
+        }
+        
+        function deleteNode(nodeId) {
+            if (!confirm('Delete this node and all connected lines?')) return;
+            
+            // Remove node
+            gridData.nodes = gridData.nodes.filter(n => n.id !== nodeId);
+            nodes.remove(nodeId);
+            
+            // Remove connected edges
+            const connectedEdges = gridData.edges.filter(e => e.from === nodeId || e.to === nodeId);
+            connectedEdges.forEach(edge => {
+                edges.remove(edge.id);
+            });
+            gridData.edges = gridData.edges.filter(e => e.from !== nodeId && e.to !== nodeId);
+        }
+        
+        function deleteEdge(edgeId) {
+            if (!confirm('Delete this transmission line?')) return;
+            
+            gridData.edges = gridData.edges.filter(e => e.id !== edgeId);
+            edges.remove(edgeId);
+        }
+        
+        function displayNodeInfo(node) {
+            const info = document.getElementById('selected-node-info');
+            editMode.selectedNode = node.id;
+
+            const flow = optimizationResults.flows ?
+                optimizationResults.flows[node.id] || {in: 0, out: 0, net: 0} :
+                {in: 0, out: 0, net: 0};
+
+            const name = node.label.split('\n')[0];
+
+            info.innerHTML = `
+                <div class="detail-form">
+                    <div class="detail-row">
+                        <label>Name</label>
+                        <input type="text" id="detail-name" value="${name}">
+                    </div>
+                    <div class="detail-row">
+                        <label>Type</label>
+                        <select id="detail-type">
+                            <option value="generation" ${node.type === 'generation' ? 'selected' : ''}>Generation</option>
+                            <option value="load" ${node.type === 'load' ? 'selected' : ''}>Load / Data Center</option>
+                            <option value="substation" ${node.type === 'substation' ? 'selected' : ''}>Substation</option>
+                        </select>
+                    </div>
+                    <div class="detail-row">
+                        <label>Capacity (MW)</label>
+                        <input type="number" id="detail-capacity" value="${Math.abs(node.capacity)}" min="0" max="2000" step="10">
+                    </div>
+                    ${node.type === 'substation' ? `
+                    <div class="detail-row">
+                        <label>Storage Capacity (kWh)</label>
+                        <input type="number" id="detail-storage" value="${node.storage}" min="0" max="500000" step="1000">
+                    </div>` : ''}
+                    <div class="btn-row">
+                        <button class="btn" onclick="applyNodeEdits()">Apply</button>
+                        <button class="btn btn-secondary" onclick="deleteSelectedNode()">Delete</button>
+                    </div>
+                    ${flow.in > 0 || flow.out > 0 ? `
+                    <div class="flow-info">
+                        <div><span>Flow In:</span> <strong>${flow.in.toFixed(1)} MW</strong></div>
+                        <div><span>Flow Out:</span> <strong>${flow.out.toFixed(1)} MW</strong></div>
+                        <div><span>Net Flow:</span> <strong>${flow.net.toFixed(1)} MW</strong></div>
+                    </div>` : ''}
+                </div>
+            `;
+        }
+
+        function applyNodeEdits() {
+            const nodeId = editMode.selectedNode;
+            if (nodeId === null) return;
+
+            const node = gridData.nodes.find(n => n.id === nodeId);
+            if (!node) return;
+
+            const name = document.getElementById('detail-name').value.trim() || node.label.split('\n')[0];
+            const type = document.getElementById('detail-type').value;
+            const capacity = parseFloat(document.getElementById('detail-capacity').value) || 0;
+            const storageEl = document.getElementById('detail-storage');
+            const storage = (type === 'substation' && storageEl) ? parseFloat(storageEl.value) || 0 : 0;
+
+            const capacityValue = type === 'load' ? -capacity : capacity;
+            node.type = type;
+            node.capacity = capacityValue;
+            node.actualCapacity = capacityValue;
+            node.storage = storage;
+            node.storagePower = storage / 1000 * 0.5; // kWh → MWh → MW at 0.5C
+            node.label = `${name}${type !== 'substation' ? '\n' + capacity + 'MW' : ''}`;
+
+            const nodeColors = {
+                'generation': '#4CAF50',
+                'load': '#FF5722',
+                'substation': '#9E9E9E'
+            };
+
+            const hasStorage = type === 'substation' && storage > 0;
+            nodes.update({
+                id: nodeId,
+                label: node.label + (hasStorage ? `\n🔋${Number(storage).toLocaleString()}kWh` : ''),
+                color: {
+                    background: hasStorage ? '#FFC107' : nodeColors[type],
+                    border: '#333'
+                }
+            });
+
+            // Refresh the detail pane to reflect changes
+            displayNodeInfo(node);
+        }
+
+        function deleteSelectedNode() {
+            const nodeId = editMode.selectedNode;
+            if (nodeId === null) return;
+            deleteNode(nodeId);
+            editMode.selectedNode = null;
+            document.getElementById('selected-node-info').innerHTML =
+                '<span style="color: #666;">Click a node to view details</span>';
+        }
+        
+        function runScenario() {
+            if (!gridData.nodes) {
+                generateGrid();
+                return;
+            }
+            
+            const scenario = calculatePowerFlows(gridData);
+            optimizationResults = scenario;
+            
+            updateNetworkVisualization(scenario);
+            updateMetrics(scenario);
+            updateAnalysisCharts(scenario);
+        }
+        
+        function calculatePowerFlows(grid) {
+            const timePeriod = controls.timePeriod.value;
+            const dcLoadFactor = parseFloat(controls.dcLoad.value) / 200; // Scaling factor
+            const variability = parseFloat(controls.variability.value) / 100;
+            
+            // Adjust generation and loads based on scenario
+            const scenarioMultipliers = {
+                'peak': {gen: 0.9, load: 1.2, solar: 0.3, wind: 0.5},
+                'offpeak': {gen: 1.0, load: 0.6, solar: 0, wind: 0.7},
+                'solar': {gen: 0.7, load: 0.9, solar: 0.95, wind: 0.3},
+                'wind': {gen: 0.7, load: 0.85, solar: 0.2, wind: 0.9},
+                'extreme': {gen: 0.6, load: 1.3, solar: 0.1, wind: 0.2}
+            };
+            
+            const mult = scenarioMultipliers[timePeriod];
+            
+            // Apply multipliers to nodes
+            const adjustedNodes = grid.nodes.map(node => {
+                const n = {...node};
+                if (n.type === 'generation') {
+                    if (n.label.includes('Solar')) {
+                        n.actualCapacity = n.capacity * mult.solar * (1 + (Math.random() - 0.5) * variability);
+                    } else if (n.label.includes('Wind')) {
+                        n.actualCapacity = n.capacity * mult.wind * (1 + (Math.random() - 0.5) * variability);
+                    } else {
+                        n.actualCapacity = n.capacity * mult.gen;
+                    }
+                } else if (n.type === 'load') {
+                    n.actualCapacity = n.capacity * mult.load * dcLoadFactor;
+                } else {
+                    n.actualCapacity = 0;
+                }
+                return n;
+            });
+            
+            // Simple DC power flow calculation
+            const flows = {};
+            const edgeFlows = [];
+            
+            // Calculate net injection at each node
+            adjustedNodes.forEach(node => {
+                let netFlow = node.actualCapacity || 0;
+                
+                // Add storage discharge/charge (substations only, storage in kWh)
+                if (node.type === 'substation' && node.storage > 0) {
+                    const powerMW = node.storage / 1000 * 0.5; // kWh → MWh, 0.5C rate
+                    const storageFactor = timePeriod === 'peak' ? -powerMW :
+                                         timePeriod === 'offpeak' ? powerMW * 0.5 : 0;
+                    netFlow += storageFactor;
+                }
+                
+                flows[node.id] = {
+                    generation: Math.max(0, netFlow),
+                    load: Math.abs(Math.min(0, netFlow)),
+                    net: netFlow,
+                    in: 0,
+                    out: 0
+                };
+            });
+            
+            // Calculate flows on edges using simple proportional distribution
+            grid.edges.forEach((edge, idx) => {
+                const fromNode = adjustedNodes.find(n => n.id === edge.from);
+                const toNode = adjustedNodes.find(n => n.id === edge.to);
+                
+                const fromFlow = flows[edge.from].net;
+                const toFlow = flows[edge.to].net;
+                
+                // Flow from surplus to deficit
+                let flow = 0;
+                if (fromFlow > 0 && toFlow < 0) {
+                    flow = Math.min(fromFlow * 0.4, Math.abs(toFlow) * 0.4, edge.capacity);
+                } else if (fromFlow < 0 && toFlow > 0) {
+                    flow = -Math.min(toFlow * 0.4, Math.abs(fromFlow) * 0.4, edge.capacity);
+                } else {
+                    // Both same sign, minimal flow
+                    flow = (fromFlow - toFlow) * 0.1;
+                }
+                
+                const utilization = Math.abs(flow) / edge.capacity;
+                
+                edgeFlows.push({
+                    id: edge.id,
+                    from: edge.from,
+                    to: edge.to,
+                    flow: flow,
+                    capacity: edge.capacity,
+                    utilization: utilization,
+                    congested: utilization > 0.95
+                });
+                
+                // Update node flows
+                if (flow > 0) {
+                    flows[edge.from].out += Math.abs(flow);
+                    flows[edge.to].in += Math.abs(flow);
+                } else {
+                    flows[edge.to].out += Math.abs(flow);
+                    flows[edge.from].in += Math.abs(flow);
+                }
+            });
+            
+            const avgUtilization = edgeFlows.length > 0 ? edgeFlows.reduce((sum, e) => sum + e.utilization, 0) / edgeFlows.length : 0;
+            const congestedLines = edgeFlows.filter(e => e.congested).length;
+            const totalStorage = grid.nodes.reduce((sum, n) => sum + n.storage, 0);
+            const efficiency = Math.max(0, 100 - congestedLines * 10);
+            
+            return {
+                flows,
+                edgeFlows,
+                avgUtilization,
+                congestedLines,
+                totalStorage,
+                efficiency,
+                nodes: adjustedNodes
+            };
+        }
+        
+        function updateNetworkVisualization(scenario) {
+            // Update edge colors based on utilization
+            scenario.edgeFlows.forEach(edgeFlow => {
+                let color;
+                if (edgeFlow.utilization > 0.95) {
+                    color = '#F44336';
+                } else if (edgeFlow.utilization > 0.8) {
+                    color = '#FF9800';
+                } else if (edgeFlow.utilization > 0.5) {
+                    color = '#FFC107';
+                } else {
+                    color = '#4CAF50';
+                }
+                
+                const width = 2 + edgeFlow.utilization * 6;
+                
+                edges.update({
+                    id: edgeFlow.id,
+                    color: {color: color},
+                    width: width,
+                    label: `${Math.abs(edgeFlow.flow).toFixed(0)}MW\n${(edgeFlow.utilization * 100).toFixed(0)}%`
+                });
+            });
+        }
+        
+        function updateMetrics(scenario) {
+            document.getElementById('metric-utilization').innerHTML = 
+                `${(scenario.avgUtilization * 100).toFixed(0)}<span class="unit">%</span>`;
+            document.getElementById('metric-congestion').innerHTML = 
+                `${scenario.congestedLines}<span class="unit"></span>`;
+            document.getElementById('metric-storage').innerHTML = 
+                `${Number(scenario.totalStorage.toFixed(0)).toLocaleString()}<span class="unit">kWh</span>`;
+            document.getElementById('metric-efficiency').innerHTML = 
+                `${scenario.efficiency.toFixed(0)}<span class="unit">%</span>`;
+            
+            // Update card colors
+            const utilizationCard = document.getElementById('card-utilization');
+            utilizationCard.className = 'metric-card';
+            if (scenario.avgUtilization > 0.8) {
+                utilizationCard.className += ' success';
+            } else if (scenario.avgUtilization > 0.5) {
+                utilizationCard.className += ' warning';
+            }
+            
+            const congestionCard = document.getElementById('card-congestion');
+            congestionCard.className = 'metric-card';
+            if (scenario.congestedLines === 0) {
+                congestionCard.className += ' success';
+            } else if (scenario.congestedLines > 3) {
+                congestionCard.className += ' warning';
+            }
+        }
+        
+        function updateAnalysisCharts(scenario) {
+            // Utilization by line
+            const sortedEdges = [...scenario.edgeFlows].sort((a, b) => b.utilization - a.utilization);
+            
+            const utilizationTrace = {
+                x: sortedEdges.map((e, i) => `Line ${i + 1}`),
+                y: sortedEdges.map(e => e.utilization * 100),
+                type: 'bar',
+                marker: {
+                    color: sortedEdges.map(e => {
+                        if (e.utilization > 0.95) return '#F44336';
+                        if (e.utilization > 0.8) return '#FF9800';
+                        if (e.utilization > 0.5) return '#FFC107';
+                        return '#4CAF50';
+                    })
+                },
+                text: sortedEdges.map(e => `${e.flow.toFixed(0)}MW / ${e.capacity}MW`),
+                textposition: 'outside'
+            };
+            
+            Plotly.newPlot('utilization-chart', [utilizationTrace], {
+                title: 'Transmission Line Utilization',
+                xaxis: {title: 'Transmission Lines (sorted by utilization)'},
+                yaxis: {title: 'Utilization (%)', range: [0, 110]},
+                shapes: [{
+                    type: 'line',
+                    x0: -0.5,
+                    x1: sortedEdges.length - 0.5,
+                    y0: 95,
+                    y1: 95,
+                    line: {color: '#F44336', width: 2, dash: 'dash'}
+                }]
+            }, {responsive: true});
+            
+            // Flow by node
+            const nodeFlows = Object.entries(scenario.flows).map(([id, flow]) => ({
+                id: parseInt(id),
+                generation: flow.generation,
+                load: flow.load,
+                net: flow.net
+            }));
+            
+            const flowTrace1 = {
+                x: nodeFlows.map(n => `Node ${n.id}`),
+                y: nodeFlows.map(n => n.generation),
+                name: 'Generation',
+                type: 'bar',
+                marker: {color: '#4CAF50'}
+            };
+            
+            const flowTrace2 = {
+                x: nodeFlows.map(n => `Node ${n.id}`),
+                y: nodeFlows.map(n => -n.load),
+                name: 'Load',
+                type: 'bar',
+                marker: {color: '#FF5722'}
+            };
+            
+            Plotly.newPlot('flow-chart', [flowTrace1, flowTrace2], {
+                title: 'Generation vs Load by Node',
+                xaxis: {title: 'Network Nodes'},
+                yaxis: {title: 'Power (MW)'},
+                barmode: 'group'
+            }, {responsive: true});
+        }
+        
+        function optimizeStorage() {
+            if (!gridData.nodes) {
+                generateGrid();
+                return;
+            }
+            
+            const budget = parseFloat(controls.storageBudget.value);
+            const goal = controls.optimizationGoal.value;
+            
+            // Run baseline scenario
+            const baseline = calculatePowerFlows(gridData);
+            
+            // Optimization algorithm: place storage where it reduces congestion most
+            const recommendations = [];
+            
+            // Calculate congestion impact for each substation
+            gridData.nodes.forEach(node => {
+                if (node.type === 'substation') {
+                    const connectedEdges = gridData.edges.filter(e =>
+                        e.from === node.id || e.to === node.id
+                    );
+
+                    const congestedCount = connectedEdges.filter(edge => {
+                        const flow = baseline.edgeFlows.find(ef =>
+                            (ef.from === edge.from && ef.to === edge.to) ||
+                            (ef.from === edge.to && ef.to === edge.from)
+                        );
+                        return flow && flow.congested;
+                    }).length;
+
+                    const avgUtilization = connectedEdges.length > 0 ? connectedEdges.reduce((sum, edge) => {
+                        const flow = baseline.edgeFlows.find(ef =>
+                            (ef.from === edge.from && ef.to === edge.to) ||
+                            (ef.from === edge.to && ef.to === edge.from)
+                        );
+                        return sum + (flow ? flow.utilization : 0);
+                    }, 0) / connectedEdges.length : 0;
+
+                    let priority = congestedCount * 10 + avgUtilization * 5;
+
+                    if (goal === 'cost') {
+                        priority = congestedCount * 15;
+                    }
+
+                    recommendations.push({
+                        nodeId: node.id,
+                        nodeName: node.label.split('\n')[0],
+                        nodeType: node.type,
+                        congestedLines: congestedCount,
+                        avgUtilization: avgUtilization,
+                        priority: priority,
+                        recommendedStorage: 0
+                    });
+                }
+            });
+            
+            // Sort by priority
+            recommendations.sort((a, b) => b.priority - a.priority);
+            
+            // Allocate budget (all values in kWh)
+            let remainingBudget = budget;
+            const minStorageSize = 10000; // 10,000 kWh minimum
+
+            recommendations.forEach(rec => {
+                if (remainingBudget >= minStorageSize) {
+                    const allocation = Math.min(
+                        remainingBudget,
+                        rec.priority * 3000,
+                        budget * 0.4 // Max 40% to one substation
+                    );
+
+                    if (allocation >= minStorageSize) {
+                        rec.recommendedStorage = Math.round(allocation / 1000) * 1000; // Round to 1000 kWh
+                        remainingBudget -= rec.recommendedStorage;
+                    }
+                }
+            });
+
+            // Apply storage to substations
+            gridData.nodes.forEach(node => {
+                if (node.type !== 'substation') {
+                    node.storage = 0;
+                    node.storagePower = 0;
+                    return;
+                }
+                const rec = recommendations.find(r => r.nodeId === node.id);
+                if (rec && rec.recommendedStorage > 0) {
+                    node.storage = rec.recommendedStorage;
+                    node.storagePower = rec.recommendedStorage / 1000 * 0.5; // kWh → MW at 0.5C
+                } else {
+                    node.storage = 0;
+                    node.storagePower = 0;
+                }
+            });
+            
+            // Re-visualize with storage
+            visualizeNetwork(gridData);
+            
+            // Run new scenario with storage
+            const withStorage = calculatePowerFlows(gridData);
+            optimizationResults = withStorage;
+            optimizationResults.recommendations = recommendations;
+            
+            updateNetworkVisualization(withStorage);
+            updateMetrics(withStorage);
+            updateAnalysisCharts(withStorage);
+            displayRecommendations(recommendations, baseline, withStorage);
+        }
+        
+        function displayRecommendations(recommendations, baseline, withStorage) {
+            const content = document.getElementById('recommendations-content');
+            
+            const improvement = {
+                utilization: ((withStorage.avgUtilization - baseline.avgUtilization) / baseline.avgUtilization * 100),
+                congestion: baseline.congestedLines - withStorage.congestedLines,
+                efficiency: withStorage.efficiency - baseline.efficiency
+            };
+            
+            const totalAllocated = recommendations.reduce((sum, r) => sum + r.recommendedStorage, 0);
+            const budget = parseFloat(controls.storageBudget.value);
+            
+            content.innerHTML = `
+                <div class="alert alert-info">
+                    <h4>📊 Optimization Results</h4>
+                    <p><strong>Storage Deployed:</strong> ${totalAllocated.toLocaleString()} kWh of ${budget.toLocaleString()} kWh budget (${(totalAllocated/budget*100).toFixed(0)}% utilized)</p>
+                    <p><strong>Performance Improvement:</strong></p>
+                    <ul>
+                        <li>Utilization: ${improvement.utilization > 0 ? '+' : ''}${improvement.utilization.toFixed(1)}%</li>
+                        <li>Congested Lines Reduced: ${improvement.congestion}</li>
+                        <li>Grid Efficiency: ${improvement.efficiency > 0 ? '+' : ''}${improvement.efficiency.toFixed(1)}%</li>
+                    </ul>
+                </div>
+                
+                <div class="chart-wrapper">
+                    <h3 style="color: #1e3c72; margin-bottom: 15px;">Storage Allocation by Substation</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Priority</th>
+                                <th>Node</th>
+                                <th>Type</th>
+                                <th>Congested Lines</th>
+                                <th>Avg Utilization</th>
+                                <th>Recommended Storage</th>
+                                <th>Impact Score</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${recommendations.map((rec, idx) => `
+                                <tr>
+                                    <td class="${rec.priority > 8 ? 'priority-high' : rec.priority > 4 ? 'priority-medium' : 'priority-low'}">
+                                        #${idx + 1}
+                                    </td>
+                                    <td><strong>${rec.nodeName}</strong></td>
+                                    <td>${rec.nodeType}</td>
+                                    <td>${rec.congestedLines}</td>
+                                    <td>${(rec.avgUtilization * 100).toFixed(0)}%</td>
+                                    <td><strong>${rec.recommendedStorage.toLocaleString()} kWh</strong></td>
+                                    <td>${rec.priority.toFixed(1)}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="chart-wrapper" style="margin-top: 20px;">
+                    <h3 style="color: #1e3c72; margin-bottom: 15px;">Investment Recommendations</h3>
+                    <div class="alert ${improvement.congestion > 0 ? 'alert-info' : 'alert-warning'}">
+                        <h4>${improvement.congestion > 0 ? '✅ Storage Effectively Reduces Congestion' : '⚠️ Additional Measures Needed'}</h4>
+                        <ul>
+                            ${improvement.congestion > 0 ? 
+                                `<li>Storage deployment eliminated ${improvement.congestion} congestion point${improvement.congestion > 1 ? 's' : ''}</li>
+                                 <li>Grid utilization improved by ${improvement.utilization.toFixed(1)}%</li>
+                                 <li>Consider proceeding with deployment at high-priority nodes</li>` :
+                                `<li>Storage alone may not resolve all congestion issues</li>
+                                 <li>Consider transmission upgrades for severely congested lines</li>
+                                 <li>Evaluate additional generation capacity near load centers</li>`
+                            }
+                            <li>Estimated CAPEX: $${(totalAllocated * 300).toLocaleString()} (at $300/kWh)</li>
+                            <li>ROI potential from congestion relief and arbitrage</li>
+                        </ul>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // Initialize on load
+        generateGrid();
+    </script>
+</body>
+</html>
