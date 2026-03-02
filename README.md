@@ -23,10 +23,12 @@ The tool sits somewhere between a teaching aid and a lightweight planning tool. 
 
 ## How to Run
 
-Just open the HTML file in any modern browser:
+**Hosted:** https://dnewcome.github.io/power-grid-sim/
+
+**Locally:** open the HTML file in any modern browser:
 
 ```bash
-firefox transmission_grid_optimizer.html
+firefox index.html
 # or serve it locally if you prefer:
 python3 -m http.server 8000
 ```
