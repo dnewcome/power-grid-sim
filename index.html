@@ -466,6 +466,156 @@
             justify-content: space-between;
             margin: 3px 0;
         }
+
+        /* Mobile sidebar toggle — hidden on desktop */
+        .mobile-controls-toggle {
+            display: none;
+        }
+
+        /* ── Tablet / mobile portrait (≤ 768px) ── */
+        @media (max-width: 768px) {
+            body {
+                padding: 8px;
+            }
+
+            .header {
+                padding: 16px;
+            }
+
+            .header h1 {
+                font-size: 1.4em;
+                margin-bottom: 6px;
+            }
+
+            .header p {
+                font-size: 0.9em;
+            }
+
+            .mobile-controls-toggle {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                width: 100%;
+                padding: 11px 16px;
+                background: #2a5298;
+                color: white;
+                border: none;
+                cursor: pointer;
+                font-size: 0.9em;
+                font-weight: 600;
+                text-align: left;
+                border-bottom: 1px solid #1e3c72;
+                transition: background 0.2s;
+            }
+
+            .mobile-controls-toggle:hover {
+                background: #1e3c72;
+            }
+
+            .main-layout {
+                grid-template-columns: 1fr;
+                min-height: auto;
+            }
+
+            .sidebar {
+                display: none;
+                max-height: none;
+                border-right: none;
+                border-bottom: 1px solid #e0e0e0;
+                overflow-y: visible;
+            }
+
+            .sidebar.mobile-open {
+                display: block;
+            }
+
+            .content-area {
+                max-height: none;
+                overflow-y: visible;
+            }
+
+            .tab-container {
+                gap: 4px;
+                overflow-x: auto;
+                flex-wrap: nowrap;
+                -webkit-overflow-scrolling: touch;
+                padding-bottom: 2px;
+            }
+
+            .tab {
+                padding: 10px 14px;
+                font-size: 0.85em;
+                flex-shrink: 0;
+            }
+
+            #network-container {
+                height: 350px;
+            }
+
+            .metrics-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .node-info-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .chart-wrapper > div {
+                height: 280px !important;
+            }
+        }
+
+        /* ── Narrow portrait (≤ 480px) ── */
+        @media (max-width: 480px) {
+            .header h1 {
+                font-size: 1.1em;
+            }
+
+            .tab {
+                padding: 8px 10px;
+                font-size: 0.8em;
+            }
+
+            #network-container {
+                height: 280px;
+            }
+
+            .metric-card .value {
+                font-size: 1.3em;
+            }
+
+            .metrics-grid {
+                gap: 8px;
+            }
+        }
+
+        /* ── Mobile landscape (≤ 900px wide, landscape orientation) ── */
+        @media (max-width: 900px) and (orientation: landscape) {
+            body {
+                padding: 6px;
+            }
+
+            .header {
+                padding: 10px 16px;
+            }
+
+            .header h1 {
+                font-size: 1.2em;
+                margin-bottom: 4px;
+            }
+
+            .header p {
+                font-size: 0.85em;
+            }
+
+            #network-container {
+                height: 220px;
+            }
+
+            .chart-wrapper > div {
+                height: 220px !important;
+            }
+        }
     </style>
 </head>
 <body>
@@ -475,6 +625,8 @@
             <p>Network Flow Analysis & Strategic Storage Placement</p>
         </div>
         
+        <button class="mobile-controls-toggle" id="sidebar-toggle" onclick="toggleSidebar()">☰ Controls</button>
+
         <div class="main-layout">
             <div class="sidebar">
                 <div class="control-section">
@@ -684,6 +836,13 @@
     </div>
 
     <script>
+        function toggleSidebar() {
+            const sidebar = document.querySelector('.sidebar');
+            sidebar.classList.toggle('mobile-open');
+            const btn = document.getElementById('sidebar-toggle');
+            btn.textContent = sidebar.classList.contains('mobile-open') ? '✕ Close Controls' : '☰ Controls';
+        }
+
         let network;
         let nodes, edges;
         let gridData = {};
